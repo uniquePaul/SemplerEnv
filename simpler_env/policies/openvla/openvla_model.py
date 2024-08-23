@@ -63,11 +63,14 @@ class OpenVLAInference:
     def reset(self, task_description: str) -> None:
         self.task_description = task_description
         self.num_image_history = 0
-
-        self.sticky_action_is_on = False
+        print(self.task_description)
+        not self.sticky_action_is_on
         self.gripper_action_repeat = 0
         self.sticky_gripper_action = 0.0
         self.previous_gripper_action = None
+    def test(self) -> None:
+        print(11111)
+
 
     def step(
         self, image: np.ndarray, task_description: Optional[str] = None, *args, **kwargs
@@ -84,27 +87,35 @@ class OpenVLAInference:
                 - 'gripper': np.ndarray of shape (1,), gripper action
                 - 'terminate_episode': np.ndarray of shape (1,), 1 if episode should be terminated, 0 otherwise
         """
+        print(111111)
         if task_description is not None:
+            print(11111198687657)
+            print(task_description)
+            print(self.task_description)
             if task_description != self.task_description:
                 self.reset(task_description)
-
+        print(task_description)
         assert image.dtype == np.uint8
         image = self._resize_image(image)
 
         image: Image.Image = Image.fromarray(image)
+        print(type(task_description))
         prompt = task_description
-
+        print(prompt)
+        print(1111111111)
+        task_description = "put eggplant into yellow basket"
+        prompt = "put eggplant into yellow basket"
         # predict action (7-dof; un-normalize for bridgev2)
         inputs = self.processor(prompt, image).to("cuda:0", dtype=torch.bfloat16)
         raw_actions = self.vla.predict_action(**inputs, unnorm_key=self.unnorm_key, do_sample=False)[None]
         # print(f"*** raw actions {raw_actions} ***")
-
+        print(11117)
         raw_action = {
             "world_vector": np.array(raw_actions[0, :3]),
             "rotation_delta": np.array(raw_actions[0, 3:6]),
             "open_gripper": np.array(raw_actions[0, 6:7]),  # range [0, 1]; 1 = open; 0 = close
         }
-
+        print(11116)
         # process raw_action to obtain the action to be sent to the maniskill2 environment
         action = {}
         action["world_vector"] = raw_action["world_vector"] * self.action_scale
@@ -113,7 +124,7 @@ class OpenVLAInference:
         action_rotation_ax, action_rotation_angle = euler2axangle(roll, pitch, yaw)
         action_rotation_axangle = action_rotation_ax * action_rotation_angle
         action["rot_axangle"] = action_rotation_axangle * self.action_scale
-
+        print(11113)
         if self.policy_setup == "google_robot":
             current_gripper_action = raw_action["open_gripper"]
             if self.previous_gripper_action is None:
@@ -139,7 +150,7 @@ class OpenVLAInference:
 
         elif self.policy_setup == "widowx_bridge":
             action["gripper"] = 2.0 * (raw_action["open_gripper"] > 0.5) - 1.0
-
+            print(11114)
         action["terminate_episode"] = np.array([0.0])
 
         return raw_action, action
